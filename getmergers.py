@@ -22,46 +22,33 @@ for i, snapid in enumerate(snapidList):
     #Plots the position of the points 
     if not os.path.exists(dir):
         os.makedirs(dir)
-    fig = plt.figure(1,figsize=(12,8),dpi=80)
+    fig = plt.figure(figsize=(18,9.3),dpi=150)
     plt.rc('text', usetex=True)
     plt.rc('font', family='serif')
     ax = fig.add_subplot(111, projection='3d')
     x=[];y=[];z=[];
     for j in pos[i]:
         x.append(j[0]); y.append(j[1]); z.append(j[2])
-        plt.title("Plotting z = {0} (contains {1} subhalos, mass $\geq$ {2})".format(snapidDic[snapid],len(x),mstarmin), y=1.08)
+    plt.title("z = {0} (contains {1} subhalos, mass $\geq$ {2})".format(snapidDic[snapid],len(x),mstarmin), y=1.08)
     ax.scatter(x, y, z)
     plt.xlabel(r'h^{-1}kpc')
     plt.ylabel(r'h^{-1}kpc')
     ax.set_zlabel(r"h^{-1}kpc")
-    plt.savefig(dir + "snapid{}.pdf".format(snapid))
+    plt.savefig(dir + "z{0}.pdf".format(snapidDic[snapid]))
     #plt.show()
 
     xvel = []; yvel = []; zvel = []
     for q in vel[i]:
         xvel.append(q[0]); yvel.append(q[1]); zvel.append(q[2])
-    print len(xvel)
-    print len(yvel)
-    print len(zvel)
-    print len(x)
-    print len(y)
-    print len(z)
 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(18,9.3),dpi=150)
     ax = fig.gca(projection='3d')
-
-    x, y, z = np.meshgrid(np.arange(-0.8, 1, 0.2),
-                      np.arange(-0.8, 1, 0.2),
-                      np.arange(-0.8, 1, 0.8))
-
-    u = np.sin(np.pi * x) * np.cos(np.pi * y) * np.cos(np.pi * z)
-    v = -np.cos(np.pi * x) * np.sin(np.pi * y) * np.cos(np.pi * z)
-    w = (np.sqrt(2.0 / 3.0) * np.cos(np.pi * x) * np.cos(np.pi * y) *
-         np.sin(np.pi * z))
-
-ax.quiver(x, y, z, u, v, w, length=0.1)
-
-plt.show()
+    plt.xlabel(r'h^{-1}kpc')
+    plt.ylabel(r'h^{-1}kpc')
+    plt.title("Velocity Vectors z = {0} (contains {1} subhalos, mass $\geq$ {2})".format(snapidDic[snapid],len(x),mstarmin), y=1.08)
+    ax.quiver(x, y, z, xvel, yvel, zvel, length=1500)
+    plt.savefig(dir + "z{0}_vec.pdf".format(snapidDic[snapid]))
+    #plt.show()
 
 
 
