@@ -16,7 +16,7 @@ z = 2.0 -> SnapID : '058'
 
 
 
-def loaddata_sg(snapid,mstarmin):
+def loaddata_sg(snapid,mstarmin,z):
     dirname2 =  './'
     class1 = SnapDir(snapid,dirname2)
     sg = class1.readsubhalo()
@@ -30,7 +30,7 @@ def loaddata_sg(snapid,mstarmin):
     boxlen = 100000.0
     chk1 = (sg_logstrmass > mstarmin)
     pos = sg_pos[chk1]
-    vel = sg_vel[chk1]
+    vel = [x/numpy.sqrt(1+z) for x in sg_vel[chk1]] #sg_vel[chk1]
     logstrmass = sg_logstrmass[chk1]
     return pos, vel, logstrmass, boxlen, h
 
@@ -70,9 +70,9 @@ def getmergerpairs(pos,vel,logstrmass,boxlen,rsepmin,rsepmax, vsepmin, vsepmax, 
     fmergedata = numpy.concatenate(fmergedata)
     return fpairs, fmergedata
 
-def getmergerdata(snapid,lstrmmin, rpmin, rpmax, deltavmin, deltavmax, strratiomin, strratiomax):
+def getmergerdata(snapid,lstrmmin, rpmin, rpmax, deltavmin, deltavmax, strratiomin, strratiomax, z):
  
-    pos, vel, logstrmass, boxlen, h = loaddata_sg(snapid,lstrmmin)
+    pos, vel, logstrmass, boxlen, h = loaddata_sg(snapid,lstrmmin, z)
     fpairs, fmergedata = getmergerpairs(pos,vel,logstrmass,boxlen,rpmin,rpmax, deltavmin, deltavmax, strratiomin, strratiomax)
     return fpairs, fmergedata
 
