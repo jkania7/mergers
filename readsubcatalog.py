@@ -26,6 +26,8 @@ def loaddata_sg(snapid,mstarmin,z):
     h = 0.702
     sg_pos = numpy.array(sg['pos']) # in h^{-1}kpc
     sg_vel = numpy.array(sg['vel']) # in km/sec
+    
+    print('numpy.array(sg[\'massbytype\'][:,4])*(10.0**10)/h = \n {0}'.format(numpy.array(sg['massbytype'][:,4])*(10.0**10)/h))
     sg_logstrmass = numpy.log10(numpy.array(sg['massbytype'][:,4])*(10.0**10)/h)
     boxlen = 100000.0
     chk1 = (sg_logstrmass > mstarmin)
@@ -63,7 +65,7 @@ def getmergerpairs(pos,vel,logstrmass,boxlen,rsepmin,rsepmax, vsepmin, vsepmax, 
              mergedata[:,0] = rprojdis[chksep]
              mergedata[:,1] = deltav[chksep]
              mergedata[:,2] = strmratio[chksep]
-             print i, ntot
+             #print i, ntot #used to make sure it loops over all pos
              fpairs.append(pairs)
              fmergedata.append(mergedata)
     fpairs = numpy.concatenate(fpairs)
