@@ -1,9 +1,12 @@
 import readsubcatalog as r
 import numpy as np
-import os, itertools, sys, math
+import os, itertools, sys, math, timeit
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from scipy.integrate import quad
+from matplotlib import rc
+rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
+rc('text', usetex=True)
 
 def friedmann(a, OmegaM, OmegaL, H0):#, OmegaR)
     Omega0 = OmegaM + OmegaL #+OmegaR
@@ -11,31 +14,36 @@ def friedmann(a, OmegaM, OmegaL, H0):#, OmegaR)
     return 1.0/H0*(OmegaM/a+ OmegaL*a**2)**(-1.0/2.0)
                  
 if __name__ == "__main__":
-    snapidDic = {'026':6.0, '027':5.5, '029':5.0, '031':4.5,'034':4.0,'037':3.5, '039':3.0,'050':2.5,'058':2.0}
+    start = timeit.default_timer() #used to find the runtime of the program
+    
+    snapidDic = {'026':6.0, '027':5.5, '029':5.0, '031':4.5,'034':4.0,'037':3.5, '039':3.0,'050':2.5,'058':2.0,'063':1.5,'068':1.0,'073':0.6,'085':0.06}
+    snapidList = ['026', '027', '029', '031','034','037', '039','050','058','063','068','073','085']
     OmegaL = 0.725
     OmegaM = 0.275
-    h0 = .701
-    H0 = h0*100/(3.086e19)*3.154e7
-    
-    snapidList = ['026', '027', '029', '031','034','037', '039','050','058']
+    h0 = 0.701
+    H0 = h0*100.0/(3.086e19)*3.154e7 #the terms following the 100.0 are MPc to km and year to seconds respectivley 
     mstarmin = 9.5 #asked for in the email
-    runs = len(snapidList)
     dir = "./imgs/" #directory to put the plots
+    #End user defined variables
+    
+    runs = len(snapidList)
     pos = [None]*runs ; vel = [None]*runs; logstrmass = [None]*runs; boxlen = [None]*runs; h = [None]*runs
     Rdiff = [None]*runs; fpairs = [None]*runs; fmergedata = [None]*runs;
     plotty = raw_input('\033[33mWould you like to make plots? (Y/N):\033[0m ')
     #plotty = 'n' #for testing
 
     for i, snapid in enumerate(snapidList):
-        print("Running interation {0} with snapid {1}".format(i, snapid))
+        print("\033[1;34mRunning interation {0} with snapid {1} (z = {2})\033[0m".format(i, snapid, snapidDic[snapid]))
     
         [pos[i], vel[i], logstrmass[i], boxlen[i], h[i]] = r.loaddata_sg(snapid, mstarmin, snapidDic[snapid])
         #print("The len(pos) = {0}, len(pos[i] = {1}, len(pos[i][1] =  {2}".format(len(pos),len(pos[i]), len(pos[i][1])))
         #gets the data points
+
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+                
         if plotty.upper() == 'Y':
             #Plots the position of the points 
-            if not os.path.exists(dir):
-                os.makedirs(dir)
             fig = plt.figure()#(figsize=(18,9.3),dpi=150)
             plt.rc('text', usetex=True)
             plt.rc('font', family='serif')
@@ -91,6 +99,8 @@ if __name__ == "__main__":
     for i,j in enumerate(snapidList):
         z[i] = float(snapidDic[j])
         z0 = z[i] + 0.5
+        print("z[i] = {0}".format(z[i]))
+        print("z0 = {0}".format(z0))
         deltaT[i], error[i] = quad(friedmann,1.0/(1.0+z0), 1.0/(1.0+z[i]),args=(OmegaM, OmegaL, H0))
         #deltaT[i], error[i] = quad(friedmann,0.0, 1.0/(1.0+z[i]),args=(OmegaM, OmegaL, H0))
         totalmergers[i] = float(len(fpairs[i]))
@@ -99,58 +109,55 @@ if __name__ == "__main__":
         mergerRate[i] = float(len(fpairs[i]))/float(deltaT[i])*10e9
         fracMergerRate[i] =  fracmergers[i]/float(deltaT[i])*10e9
 
+    stop = timeit.default_timer()#stops the timer before plotting
     #print mergerRate
     #print fracMergerRate
     
     f, ax = plt.subplots(3, sharex=True) #plt.figure(dpi=100)
-    plt.rc('text', usetex=True)
-    plt.rc('font', family='serif')
     ax[0].plot(z, totalmergers, 'ro')
-    ax[0].set_title('Mergers at Redshift z')
+    ax[0].set_title(r'Mergers at $z$')
     ax[0].set_xlim([snapidDic[snapidList[-1]]-0.25, snapidDic[snapidList[0]]+0.25])
-    ax[0].set_ylim([min(totalmergers)-10, max(totalmergers)+10])
+    ax[0].set_ylim([min(totalmergers)-15, max(totalmergers)+15])
     ax[0].grid(True)
     #ax[0].set_yscale('log')
-    ax[0].set_ylabel('Number of Mergers')
+    ax[0].set_ylabel(r'Number of Mergers')
 
     ax[1].plot(z, fracmergers, 'g^')
     ax[1].grid(True)
     ax[1].set_ylim([min(fracmergers)-1e-3, max(fracmergers)+1e-3])
-    ax[1].set_ylabel('Merger Fraction')
+    ax[1].set_ylabel(r'Merger Fraction')
     
     ax[2].plot(z, numHalos, 'bo')
-    ax[2].set_xlabel('z')
+    ax[2].set_xlabel(r'$z$')
     ax[2].grid(True)
-    ax[2].set_ylim([min(numHalos)-10e2, max(numHalos)+10e2])
-    ax[2].set_ylabel('Number of subhalos')
+    ax[2].set_ylim([min(numHalos)-15e2, max(numHalos)+15e2])
+    ax[2].set_ylabel(r'Number of subhalos')
     
-    plt.savefig(dir + "MergersAtZ.pdf")
+    plt.savefig(dir + "Merger.pdf")
     plt.show()
 
 
     f2, ax2 = plt.subplots(3, sharex=True) #plt.figure(dpi=100)
-    plt.rc('text', usetex=True)
-    plt.rc('font', family='serif')
     ax2[0].plot(z, mergerRate, 'ro')
-    ax2[0].set_title('Mergers at Redshift z')
+    ax2[0].set_title(r'Merger Rate at $z$')
     ax2[0].set_xlim([snapidDic[snapidList[-1]]-0.25, snapidDic[snapidList[0]]+0.25])
     ax2[0].set_ylim([min(mergerRate)-10e2, max(mergerRate)+10e2])
     ax2[0].grid(True)
     #ax2[0].set_yscale('log')
-    ax2[0].set_ylabel('Mergers/Gyr')
+    ax2[0].set_ylabel(r'Mergers/Gyr')
 
     ax2[1].plot(z, fracMergerRate, 'g^')
     ax2[1].grid(True)
     ax2[1].set_ylim([min(fracMergerRate)-1e-1, max(fracMergerRate)+1e-1])
-    ax2[1].set_ylabel('Merger Fraction/Gyr')
+    ax2[1].set_ylabel(r'Merger Fraction/Gyr')
     
     ax2[2].plot(z, numHalos, 'bo')
-    ax2[2].set_xlabel('z')
+    ax2[2].set_xlabel(r'$z$')
     ax2[2].grid(True)
-    ax2[2].set_ylim([min(numHalos)-10e2, max(numHalos)+10e2])
-    ax2[2].set_ylabel('Number of subhalos')
+    ax2[2].set_ylim([min(numHalos)-15e2, max(numHalos)+15e2])
+    ax2[2].set_ylabel(r'Number of subhalos')
     
-    plt.savefig(dir + "MergerRateAtZ.pdf")
+    plt.savefig(dir + "MergerRate.pdf")
     #mng = plt.get_current_fig_manager()
     #mng.frame.Maximize(True)
     plt.show()
@@ -158,13 +165,31 @@ if __name__ == "__main__":
     
     zdense = np.linspace(0, snapidDic[snapidList[0]]+0.25, num=150) 
     z14 = (1.0+zdense)**4.0
-    fig10 = plt.plot(z, fracMergerRate, 'g^', label='MBii', zdense, z14, 'r--', label='(1+z)^4')
-    plt.xlabel('z')
-    plt.ylabel('LOG(Merger Fraction/Gyr)')
+
+    fig10 = plt.plot(z, fracMergerRate, 'g^', label='MBii')
+    fig11 = plt.plot(zdense, z14, 'r--', label='(1+z)^4')
+    #plt.legend([fig10, fig11], ["MBii", "$(1+z)^4$"])
+    #plt.legend(loc='upper left')
+    plt.xlabel(r'$z$')
+    plt.title(r'Log(Merger Rate) w/ Provisional Merger Time')
+    plt.ylabel(r'LOG(Merger Fraction/Gyr)')
     plt.yscale('log')
     plt.xlim([0 , snapidDic[snapidList[0]]+0.25])
     plt.grid(True)
     plt.savefig(dir + "MergerRateLog.pdf")
     plt.show()
+
+    fig12 = plt.plot(z, fracmergers, 'bs', zdense, z14, 'r--', label='(1+z)^4')
+    plt.xlabel(r'$z$')
+    plt.title(r'Log(Merger Fraction)')
+    plt.ylabel(r'Merger Fraction')
+    plt.yscale('log')
+    plt.xlim([0 , snapidDic[snapidList[0]]+0.25])
+    plt.grid(True)
+    plt.savefig(dir + "MergerFracLog.pdf")
+    plt.show()
     
-    print deltaT
+    print("deltaT = {0}".format(deltaT))
+
+    
+    print("Runtime = {0:.1f} min".format((stop - start)/60.0))
