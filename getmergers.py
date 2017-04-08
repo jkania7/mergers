@@ -1,3 +1,6 @@
+"""
+Main script, calls the scripts and creates the plots. Created by J. Kania as part of part of undergraduate research at CMU
+"""
 import readsubcatalog as r
 import numpy as np
 import os, itertools, sys, math, timeit
@@ -8,16 +11,29 @@ from matplotlib import rc
 rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
 rc('text', usetex=True)
 
-def friedmann(a, OmegaM, OmegaL, H0):#, OmegaR)
+def friedmann(a, OmegaM, OmegaL, H0):#, OmegaR) #simplified friedmann equations
     Omega0 = OmegaM + OmegaL #+OmegaR
     #return 1/H0*(1/(OmegaR/a**2 + OmegaM/a+ OmegaL*a**2+ (1-Omega0))^(-1/2)                 
     return 1.0/H0*(OmegaM/a+ OmegaL*a**2)**(-1.0/2.0)
+
+def mergerfreq(z, Ms, h0):
+    #z = (1.0/a)-1.0 #Not needed, everything is done already in z
+    Ms = Ms/(3.0*10.0**10.0/h0)#stellar mass of the pair in units of 3*10^10*H^-1*Msun as defined in K&W p1489
+    #for vp < 300 km/s and rp < 30kpc/h from K&W p1497
+    T0 = 2038.0*h0
+    f1 = -165.0*h0/(10.0**5.0)
+    f2 = 690.0*h0/(10.0**5.0)
+    return (T0**(-0.5)+f1*z+f2*(np.log10(Ms)-10.0))**2.0 #K&W (9) on p1496 [Units of Myr]
                  
 if __name__ == "__main__":
     start = timeit.default_timer() #used to find the runtime of the program
     
     snapidDic = {'026':6.0, '027':5.5, '029':5.0, '031':4.5,'034':4.0,'037':3.5, '039':3.0,'050':2.5,'058':2.0,'063':1.5,'068':1.0,'073':0.6,'085':0.06}
-    snapidList = ['026', '027', '029', '031','034','037', '039','050','058','063','068','073','085']
+    snapidList = ['026', '027', '029', '031','034','037', '039','050','058','063','068','073','085']#=list(snapidDic) #this does not keep order in z
+    """
+    snapidDic = {'026':6.0, '029':5.0,'034':4.0,'039':3.0,'058':2.0,'068':1.0} #a sparse list for testing
+    snapidList = ['026', '029','034','039','058','068']#=list(snapidDic) #this does not keep order in z
+    """
     OmegaL = 0.725
     OmegaM = 0.275
     h0 = 0.701
@@ -25,8 +41,11 @@ if __name__ == "__main__":
     mstarmin = 9.5 #asked for in the email
     dir = "./imgs/" #directory to put the plots
     #End user defined variables
+
+    if not os.path.exists(dir):
+            os.makedirs(dir)
     
-    runs = len(snapidList)
+    runs = len(snapidDic)
     pos = [None]*runs ; vel = [None]*runs; logstrmass = [None]*runs; boxlen = [None]*runs; h = [None]*runs
     Rdiff = [None]*runs; fpairs = [None]*runs; fmergedata = [None]*runs;
     plotty = raw_input('\033[33mWould you like to make plots? (Y/N):\033[0m ')
@@ -38,9 +57,6 @@ if __name__ == "__main__":
         [pos[i], vel[i], logstrmass[i], boxlen[i], h[i]] = r.loaddata_sg(snapid, mstarmin, snapidDic[snapid])
         #print("The len(pos) = {0}, len(pos[i] = {1}, len(pos[i][1] =  {2}".format(len(pos),len(pos[i]), len(pos[i][1])))
         #gets the data points
-
-        if not os.path.exists(dir):
-            os.makedirs(dir)
                 
         if plotty.upper() == 'Y':
             #Plots the position of the points 
@@ -93,22 +109,26 @@ if __name__ == "__main__":
     #Plots total mergers at a given z    
     z=[None]*len(snapidList)
     totalmergers = [None]*len(snapidList); fracmergers = [None]*len(snapidList); numHalos = [None]*len(snapidList)
-    deltaT = [None]*len(snapidList); error = [None]*len(snapidList); mergerRate = [None]*len(snapidList)
+    mergerRate = [None]*len(snapidList); #deltaT = [None]*len(snapidList); error = [None]*len(snapidList);
     fracMergerRate = [None]*len(snapidList)
-    
+    print("fpairs[i] = {0}".format(fpairs[i]))
+    print("fmergedata[i] = {0}".format(fmergedata[i]))
     for i,j in enumerate(snapidList):
         z[i] = float(snapidDic[j])
-        z0 = z[i] + 0.5
-        print("z[i] = {0}".format(z[i]))
-        print("z0 = {0}".format(z0))
-        deltaT[i], error[i] = quad(friedmann,1.0/(1.0+z0), 1.0/(1.0+z[i]),args=(OmegaM, OmegaL, H0))
-        #deltaT[i], error[i] = quad(friedmann,0.0, 1.0/(1.0+z[i]),args=(OmegaM, OmegaL, H0))
+        #z0 = z[i] + 0.5 #used for first guess of merger rate
+        #deltaT[i], error[i] = quad(friedmann,1.0/(1.0+z0), 1.0/(1.0+z[i]),args=(OmegaM, OmegaL, H0)) #to calculate times between z intervals, used as inital guess for merger rate
         totalmergers[i] = float(len(fpairs[i]))
         fracmergers[i] = float(len(fpairs[i]))/float(len(pos[i]))
         numHalos[i] = float(len(pos[i]))
-        mergerRate[i] = float(len(fpairs[i]))/float(deltaT[i])*10e9
-        fracMergerRate[i] =  fracmergers[i]/float(deltaT[i])*10e9
-
+        #mergerRate[i] = float(len(fpairs[i]))/float(deltaT[i])*10e9 #first guess at merger rates
+        #fracMergerRate[i] =  fracmergers[i]/float(deltaT[i])*10e9
+        totalMergT = 0.0#total merger time
+        for l in range(len(fpairs[i])):
+            print("fmergedata[i][l][3] = {0}".format(fmergedata[i][l][3]))
+            totalMergT = totalMergT + mergerfreq(z[i], fmergedata[i][l][3], h0)
+        mergerRate[i] = float(len(fpairs[i]))*float(totalMergT)*10.0**3.0#10^3 to go from /Myr to /Gyr
+        fracMergerRate[i] =  fracmergers[i]*float(totalMergT)*10.0**3.0
+    
     stop = timeit.default_timer()#stops the timer before plotting
     #print mergerRate
     #print fracMergerRate
@@ -149,7 +169,7 @@ if __name__ == "__main__":
     ax2[1].plot(z, fracMergerRate, 'g^')
     ax2[1].grid(True)
     ax2[1].set_ylim([min(fracMergerRate)-1e-1, max(fracMergerRate)+1e-1])
-    ax2[1].set_ylabel(r'Merger Fraction/Gyr')
+    ax2[1].set_ylabel(r'Mergere/(Gyr*subhalo)')
     
     ax2[2].plot(z, numHalos, 'bo')
     ax2[2].set_xlabel(r'$z$')
@@ -171,7 +191,7 @@ if __name__ == "__main__":
     #plt.legend([fig10, fig11], ["MBii", "$(1+z)^4$"])
     #plt.legend(loc='upper left')
     plt.xlabel(r'$z$')
-    plt.title(r'Log(Merger Rate) w/ Provisional Merger Time')
+    plt.title(r'Log(Merger Rate)')
     plt.ylabel(r'LOG(Merger Fraction/Gyr)')
     plt.yscale('log')
     plt.xlim([0 , snapidDic[snapidList[0]]+0.25])
@@ -189,7 +209,7 @@ if __name__ == "__main__":
     plt.savefig(dir + "MergerFracLog.pdf")
     plt.show()
     
-    print("deltaT = {0}".format(deltaT))
+    #print("deltaT = {0}".format(deltaT))
 
     
     print("Runtime = {0:.1f} min".format((stop - start)/60.0))

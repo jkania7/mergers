@@ -1,3 +1,8 @@
+"""
+This script finds the pairs that meet the criteria, returns the pairs and information about them
+created by Annth and modified by jwk
+"""
+
 import numpy
 from readsubhalo import *
 
@@ -26,9 +31,9 @@ def loaddata_sg(snapid,mstarmin,z):
     h = 0.702
     sg_pos = numpy.array(sg['pos']) # in h^{-1}kpc
     sg_vel = numpy.array(sg['vel']) # in km/sec
-    
-    print('numpy.array(sg[\'massbytype\'][:,4])*(10.0**10)/h = \n {0}'.format(numpy.array(sg['massbytype'][:,4])*(10.0**10)/h))
     sg_logstrmass = numpy.log10(numpy.array(sg['massbytype'][:,4])*(10.0**10)/h)
+    """sg_logstrmass = numpy.log10(numpy.array(sg[\'massbytype\'][:,4])*(10.0**10)/h will through RuntimeWarning: divide by zero encountered in log10,
+    this causes the log to be negative infinity, this point gets thrown out at chk1 below, so we don't have to worry."""
     boxlen = 100000.0
     chk1 = (sg_logstrmass > mstarmin)
     pos = sg_pos[chk1]
@@ -56,15 +61,17 @@ def getmergerpairs(pos,vel,logstrmass,boxlen,rsepmin,rsepmax, vsepmin, vsepmax, 
              vdiff1 = vel - vel[i]
              deltav = pow((vdiff1[:,0])**2 + (vdiff1[:,1])**2,0.5)
              strmratio = 10**(logstrmass - logstrmass[i])
+             cmbmass = 10**logstrmass + 10**logstrmass[i]#added jwk
              chksep = ((rprojdis > rsepmin) & (rprojdis < rsepmax) & (deltav > vsepmin) & (deltav < vsepmax) & (strmratio > mrmin) & (strmratio < mrmax))
              cpairs = numpy.arange(0,ntot)[chksep]
              pairs = numpy.zeros((len(cpairs),2),dtype = numpy.int32)
              pairs[:,0] = i
              pairs[:,1] = cpairs  
-             mergedata = numpy.zeros((len(cpairs),3),dtype = numpy.float32)
+             mergedata = numpy.zeros((len(cpairs),4),dtype = numpy.float32)#Changed from 3 to 4 by jwk
              mergedata[:,0] = rprojdis[chksep]
              mergedata[:,1] = deltav[chksep]
              mergedata[:,2] = strmratio[chksep]
+             mergedata[:,3] = cmbmass[chksep]#added jwk for merger rate determination
              #print i, ntot #used to make sure it loops over all pos
              fpairs.append(pairs)
              fmergedata.append(mergedata)
