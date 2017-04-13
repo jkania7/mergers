@@ -5,6 +5,7 @@ import readsubcatalog as r
 import numpy as np
 import os, itertools, sys, math, timeit
 from mpl_toolkits.mplot3d import Axes3D
+from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 from scipy.integrate import quad
 from matplotlib import rc
@@ -24,6 +25,9 @@ def mergerfreq(z, Ms, h0):
     f1 = -165.0*h0/(10.0**5.0)
     f2 = 690.0*h0/(10.0**5.0)
     return (T0**(-0.5)+f1*z+f2*(np.log10(Ms)-10.0))**2.0 #K&W (9) on p1496 [Units of Myr]
+
+def mergerfit(x, a, b, c):
+    return a + b*(1.0+x)**c
                  
 if __name__ == "__main__":
     start = timeit.default_timer() #used to find the runtime of the program
@@ -124,9 +128,10 @@ if __name__ == "__main__":
         #fracMergerRate[i] =  fracmergers[i]/float(deltaT[i])*10e9
         totalMergT = 0.0#total merger time
         for l in range(len(fpairs[i])):
-            print("fmergedata[i][l][3] = {0}".format(fmergedata[i][l][3]))
+            print("totalMergT = {0}".format(totalMergT))
             totalMergT = totalMergT + mergerfreq(z[i], fmergedata[i][l][3], h0)
-        mergerRate[i] = float(len(fpairs[i]))*float(totalMergT)*10.0**3.0#10^3 to go from /Myr to /Gyr
+        #mergerRate[i] = float(len(fpairs[i]))*float(totalMergT)*10.0**3.0#10^3 to go from /Myr to /Gyr
+        mergerRate[i] = float(totalMergT)*10.0**3.0#10^3
         fracMergerRate[i] =  fracmergers[i]*float(totalMergT)*10.0**3.0
     
     stop = timeit.default_timer()#stops the timer before plotting
@@ -136,21 +141,21 @@ if __name__ == "__main__":
     f, ax = plt.subplots(3, sharex=True) #plt.figure(dpi=100)
     ax[0].plot(z, totalmergers, 'ro')
     ax[0].set_title(r'Mergers at $z$')
-    ax[0].set_xlim([snapidDic[snapidList[-1]]-0.25, snapidDic[snapidList[0]]+0.25])
-    ax[0].set_ylim([min(totalmergers)-15, max(totalmergers)+15])
+    ax[0].set_xlim([snapidDic[snapidList[-1]]-0.15, snapidDic[snapidList[0]]+0.15])
+    ax[0].set_ylim([min(totalmergers)-3e1, max(totalmergers)+3e1])
     ax[0].grid(True)
     #ax[0].set_yscale('log')
     ax[0].set_ylabel(r'Number of Mergers')
 
     ax[1].plot(z, fracmergers, 'g^')
     ax[1].grid(True)
-    ax[1].set_ylim([min(fracmergers)-1e-3, max(fracmergers)+1e-3])
+    ax[1].set_ylim([min(fracmergers)*0.6, max(fracmergers)*1.1])
     ax[1].set_ylabel(r'Merger Fraction')
     
     ax[2].plot(z, numHalos, 'bo')
     ax[2].set_xlabel(r'$z$')
     ax[2].grid(True)
-    ax[2].set_ylim([min(numHalos)-15e2, max(numHalos)+15e2])
+    ax[2].set_ylim([min(numHalos)-2e3, max(numHalos)+2e3])
     ax[2].set_ylabel(r'Number of subhalos')
     
     plt.savefig(dir + "Merger.pdf")
@@ -160,8 +165,8 @@ if __name__ == "__main__":
     f2, ax2 = plt.subplots(3, sharex=True) #plt.figure(dpi=100)
     ax2[0].plot(z, mergerRate, 'ro')
     ax2[0].set_title(r'Merger Rate at $z$')
-    ax2[0].set_xlim([snapidDic[snapidList[-1]]-0.25, snapidDic[snapidList[0]]+0.25])
-    ax2[0].set_ylim([min(mergerRate)-10e2, max(mergerRate)+10e2])
+    ax2[0].set_xlim([snapidDic[snapidList[-1]]-0.15, snapidDic[snapidList[0]]+0.15])
+    ax2[0].set_ylim([min(mergerRate)-1e1, max(mergerRate)+1e1])
     ax2[0].grid(True)
     #ax2[0].set_yscale('log')
     ax2[0].set_ylabel(r'Mergers/Gyr')
@@ -174,7 +179,7 @@ if __name__ == "__main__":
     ax2[2].plot(z, numHalos, 'bo')
     ax2[2].set_xlabel(r'$z$')
     ax2[2].grid(True)
-    ax2[2].set_ylim([min(numHalos)-15e2, max(numHalos)+15e2])
+    ax2[2].set_ylim([min(numHalos)-2e3, max(numHalos)+2e3])
     ax2[2].set_ylabel(r'Number of subhalos')
     
     plt.savefig(dir + "MergerRate.pdf")
@@ -184,27 +189,34 @@ if __name__ == "__main__":
 
     
     zdense = np.linspace(0, snapidDic[snapidList[0]]+0.25, num=150) 
-    z14 = (1.0+zdense)**4.0
+    #z14 = (1.0+zdense)**4.0 #first guess at fitted curve 
 
+    pars1, pcoc1 = curve_fit(mergerfit, z, fracMergerRate, p0=[-1,1,4])#, bounds=((-4, 0, 3),(0, 4.5, 4.5)))
+    print("For a+b*(1+z)^c; [a,b,c] = {0}".format(pars1))
+    
     fig10 = plt.plot(z, fracMergerRate, 'g^', label='MBii')
-    fig11 = plt.plot(zdense, z14, 'r--', label='(1+z)^4')
+    fig11 = plt.plot(zdense, mergerfit(zdense, *pars1), 'r--', label='(1+z)^4')
     #plt.legend([fig10, fig11], ["MBii", "$(1+z)^4$"])
     #plt.legend(loc='upper left')
     plt.xlabel(r'$z$')
     plt.title(r'Log(Merger Rate)')
     plt.ylabel(r'LOG(Merger Fraction/Gyr)')
     plt.yscale('log')
-    plt.xlim([0 , snapidDic[snapidList[0]]+0.25])
+    plt.xlim([-0.3 , snapidDic[snapidList[0]]+0.3])
     plt.grid(True)
     plt.savefig(dir + "MergerRateLog.pdf")
     plt.show()
 
-    fig12 = plt.plot(z, fracmergers, 'bs', zdense, z14, 'r--', label='(1+z)^4')
+    pars2, pcoc2 = curve_fit(mergerfit, z, fracmergers, p0=[-1,1,4])#, bounds=([-4, 0, 3], [0, 4.5, 4.5]) )
+    print("For a+b*(1+z)^c; [a,b,c] = {0}".format(pars2))
+
+    fig12 = plt.plot(z, fracmergers, 'bs')
+    plt.plot(zdense, mergerfit(zdense, *pars2), 'r--', label='(1+z)^4')
     plt.xlabel(r'$z$')
     plt.title(r'Log(Merger Fraction)')
     plt.ylabel(r'Merger Fraction')
     plt.yscale('log')
-    plt.xlim([0 , snapidDic[snapidList[0]]+0.25])
+    plt.xlim([-0.3 , snapidDic[snapidList[0]]+0.3])
     plt.grid(True)
     plt.savefig(dir + "MergerFracLog.pdf")
     plt.show()
