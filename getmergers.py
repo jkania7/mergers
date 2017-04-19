@@ -191,7 +191,7 @@ if __name__ == "__main__":
     zdense = np.linspace(0, snapidDic[snapidList[0]]+0.25, num=150) 
     #z14 = (1.0+zdense)**4.0 #first guess at fitted curve 
 
-    pars1, pcoc1 = curve_fit(mergerfit, z, fracMergerRate, p0=[-1,1,4])#, bounds=((-4, 0, 3),(0, 4.5, 4.5)))
+    pars1, pcoc1 = curve_fit(mergerfit, z, fracMergerRate, p0=[-1,1,4], bounds=((-4, 0, 3),(0, 4.5, 4.5)))
     print("For a+b*(1+z)^c; [a,b,c] = {0}".format(pars1))
     
     fig10 = plt.plot(z, fracMergerRate, 'g^', label='MBii')
@@ -207,7 +207,7 @@ if __name__ == "__main__":
     plt.savefig(dir + "MergerRateLog.pdf")
     plt.show()
 
-    pars2, pcoc2 = curve_fit(mergerfit, z, fracmergers, p0=[-1,1,4])#, bounds=([-4, 0, 3], [0, 4.5, 4.5]) )
+    pars2, pcoc2 = curve_fit(mergerfit, z, fracmergers, p0=[-1,1,4], bounds=([-4, 0, 3], [0, 4.5, 4.5]) )
     print("For a+b*(1+z)^c; [a,b,c] = {0}".format(pars2))
 
     fig12 = plt.plot(z, fracmergers, 'bs')
